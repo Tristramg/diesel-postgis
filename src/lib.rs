@@ -1,5 +1,6 @@
 extern crate diesel;
 extern crate byteorder;
+extern crate geo;
 
 use byteorder::{ByteOrder, LittleEndian, BigEndian};
 use std::error::Error;
@@ -9,36 +10,13 @@ use diesel::query_builder::QueryId;
 use diesel::row;
 use diesel::types::{FromSql, ToSql, IsNull, HasSqlType, FromSqlRow};
 use std::fmt;
-
-pub struct Point {
-    pub x: f64,
-    pub y: f64,
-}
-
-impl Point {
-    pub fn from(bytes: &[u8], big_endian: bool) -> Self {
-        Point {
-            x: read_f64(&bytes[0..8], big_endian),
-            y: read_f64(&bytes[8..16], big_endian),
-        }
-    }
-}
-
-pub enum GeometryType {
-    Point(Point),
-    MultiPoint(Vec<Point>),
-    Line(Point, Point),
-    LineString(Vec<Point>),
-    MultiLineString(Vec<Vec<Point>>),
-    Polygon(Vec<Point>),
-    MultiPolygon(Vec<Vec<Point>>),
-}
+use geo::*;
 
 
 pub struct Geography {
     pub big_endian: bool,
     pub srid: Option<u32>,
-    pub geom: GeometryType,
+    pub geom: geo::Geometry<f64>,
 }
 
 #[derive(Debug)]
@@ -70,7 +48,8 @@ impl Geography {
                 Ok(Geography {
                     big_endian: big_endian,
                     srid: srid,
-                    geom: GeometryType::Point(Point::from(&bytes[9..25], big_endian)),
+                    geom: Geometry::Point(Point::<f64>::new(read_f64(&bytes[9..17], big_endian),
+                                                            read_f64(&bytes[17..25], big_endian))),
                 })
             }
             _ => Err(Box::new(NotImplemented {})),
@@ -136,6 +115,7 @@ mod tests {
     use self::rustc_serialize::hex::FromHex;
     use diesel::types::FromSql;
     use std::f64;
+    use geo::*;
 
     #[test]
     fn read_nums() {
@@ -149,9 +129,9 @@ mod tests {
         let geog = Geography::from_sql(&ewkb).unwrap();
         assert_eq!(geog.srid, Some(4326));
         match geog.geom {
-            GeometryType::Point(p) => {
-                assert!(p.x - 42. <= f64::EPSILON);
-                assert!(p.y - 33. <= f64::EPSILON);
+            Geometry::Point(p) => {
+                assert!(p.x() - 42. <= f64::EPSILON);
+                assert!(p.y() - 33. <= f64::EPSILON);
             }
             _ => {
                 assert!(false);
