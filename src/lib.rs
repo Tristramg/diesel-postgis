@@ -93,7 +93,7 @@ impl HasSqlType<PgGeometry> for Pg {
 impl QueryId for PgGeometry {
     type QueryId = Self;
     fn has_static_query_id() -> bool {
-        false
+        true
     }
 }
 
