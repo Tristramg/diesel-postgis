@@ -1,6 +1,6 @@
 extern crate diesel;
 extern crate byteorder;
-extern crate geo;
+pub extern crate geo;
 
 use byteorder::{ByteOrder, LittleEndian, BigEndian};
 use std::error::Error;
@@ -10,7 +10,6 @@ use diesel::row;
 use diesel::types::{FromSql, ToSql, IsNull, HasSqlType, FromSqlRow};
 use diesel::query_builder::QueryId;
 use std::fmt;
-pub use geo::*;
 
 
 #[derive(Debug)]
@@ -44,10 +43,10 @@ fn read_f64(bytes: &[u8], big_endian: bool) -> f64 {
     }
 }
 
-pub struct PgGeometry {}
-pub type Geom = Geometry<f64>;
+pub struct Geometry {}
+pub type Geom = geo::Geometry<f64>;
 
-impl FromSql<PgGeometry, Pg> for Geom {
+impl FromSql<Geometry, Pg> for Geom {
     fn from_sql(bytes: Option<&[u8]>) -> Result<Self, Box<Error + Send + Sync>> {
         let bytes = bytes.unwrap();
         let big_endian = bytes[0] == 0u8;
@@ -61,27 +60,29 @@ impl FromSql<PgGeometry, Pg> for Geom {
 
         match type_id & 0xFF {
             0x01 => {
-                Ok(Geometry::Point(Point::<f64>::new(read_f64(&bytes[9..17], big_endian),
-                                                     read_f64(&bytes[17..25], big_endian))))
+                Ok(geo::Geometry::Point(geo::Point::<f64>::new(read_f64(&bytes[9..17],
+                                                                        big_endian),
+                                                               read_f64(&bytes[17..25],
+                                                                        big_endian))))
             }
             _ => Err(Box::new(NotImplemented {})),
         }
     }
 }
 
-impl FromSqlRow<PgGeometry, Pg> for Geom {
+impl FromSqlRow<Geometry, Pg> for Geom {
     fn build_from_row<T: row::Row<Pg>>(row: &mut T) -> Result<Self, Box<Error + Send + Sync>> {
         Geom::from_sql(row.take())
     }
 }
 
-impl ToSql<PgGeometry, Pg> for Geom {
+impl ToSql<Geometry, Pg> for Geom {
     fn to_sql<W: Write>(&self, _: &mut W) -> Result<IsNull, Box<Error + Send + Sync>> {
         Err(Box::new(NotImplemented {}))
     }
 }
 
-impl HasSqlType<PgGeometry> for Pg {
+impl HasSqlType<Geometry> for Pg {
     fn metadata() -> PgTypeMetadata {
         PgTypeMetadata {
             oid: 25179,
@@ -90,7 +91,7 @@ impl HasSqlType<PgGeometry> for Pg {
     }
 }
 
-impl QueryId for PgGeometry {
+impl QueryId for Geometry {
     type QueryId = Self;
     fn has_static_query_id() -> bool {
         true
