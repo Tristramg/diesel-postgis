@@ -1,0 +1,10 @@
+[package]
+name = "diesel_postgis"
+version = "0.1.0"
+authors = ["Tristram Gräbener <tristramg@gmail.com>"]
+
+[dependencies]
+diesel = "0.8.0"
+byteorder = "0.5.3"
+rustc-serialize = "0.3"
+geo = "0.3.1"
